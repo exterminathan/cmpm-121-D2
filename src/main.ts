@@ -13,6 +13,7 @@ app.append(titleEL);
 
 
 
+
 //Main Canvas
 const canvas = document.createElement("canvas");
 canvas.width = 256;
