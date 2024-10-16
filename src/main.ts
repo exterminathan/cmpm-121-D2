@@ -9,10 +9,8 @@ document.title = APP_NAME;
 // ~-------------------VARIABLES-----------------~
 
 let isDrawing = false;
-let lastX = 0;
-let lastY = 0;
 let points: Array<Array<{x: number, y: number}>> = [];
-
+let redoStack: Array<Array<{x: number, y: number}>> = [];
 
 
 // ~------------------STATIC---------------------~
@@ -31,10 +29,27 @@ canvas.height = 256;
 
 app.append(canvas);
 
+//Buttons Div
+const buttonDiv = document.createElement("div");
+
+//Undo Button
+const undoBtn = document.createElement("button");
+undoBtn.textContent = "Undo";
+buttonDiv.append(undoBtn);
+
+//Redo Button
+const redoBtn = document.createElement("button");
+redoBtn.textContent = "Redo";
+buttonDiv.append(redoBtn);
+
+
 //Clear Button
 const clearBtn = document.createElement("button");
 clearBtn.textContent = "Clear";
-app.append(clearBtn);
+buttonDiv.append(clearBtn);
+
+
+app.append(buttonDiv);
 
 
 // ~--------------CANVAS STUFF-------------------~
@@ -68,8 +83,6 @@ function addPoint(x: number, y: number) {
     canvas.dispatchEvent(event);
 }
 
-
-
 function draw(event: MouseEvent) {
     // also check here for context existing
     if (!isDrawing || !canvasContext) {return;}
@@ -79,6 +92,7 @@ function draw(event: MouseEvent) {
 }
 
 function stopDraw(event: MouseEvent) {
+    event;
     isDrawing = false;
 }
 
@@ -90,6 +104,7 @@ function redraw() {
     clearCanvas();
 
     for (const p of points) {
+        // vs code keeps adding these ? but it doesn't compile without them so :/
         canvasContext?.beginPath()
         for (let i = 0; i < p.length; i++) {
             const point  = p[i];
@@ -118,4 +133,29 @@ canvas.addEventListener("drawing-changed", redraw);
 clearBtn.addEventListener("click", () => {
     points = [];
     clearCanvas();
+})
+
+
+//Add to redo stack and remove from canvas
+undoBtn.addEventListener("click", () => {
+    if (points.length > 0) {
+        const last = points.pop();
+        if (last) {
+            redoStack.push(last);
+        }
+        const event = new CustomEvent("drawing-changed");
+        canvas.dispatchEvent(event);
+    }
+})
+
+//Remove from redo stack and add to canvas
+redoBtn.addEventListener("click", () => {
+    if (redoStack.length > 0) {
+        const last = redoStack.pop();
+        if (last) {
+            points.push(last);
+        }
+        const event = new CustomEvent("drawing-changed");
+        canvas.dispatchEvent(event);
+    }
 })
