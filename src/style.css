@@ -13,6 +13,13 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+
+canvas {
+  border: 3px solid black;
+  filter: drop-shadow(3px 3px 5px rgb(48, 22, 1) ); 
+}
+
+
 a {
   font-weight: 500;
   color: #646cff;
