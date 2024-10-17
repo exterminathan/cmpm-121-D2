@@ -13,11 +13,12 @@ interface Displayable {
 }
 
 
-function drawLine(initX: number, initY: number): Displayable {
+function drawLine(initX: number, initY: number, thickness: number): Displayable {
     const points: Array<{x: number; y: number}> = [{x: initX, y: initY}];
 
     return {
         display(ctx: CanvasRenderingContext2D) {
+            ctx.lineWidth = thickness;
             ctx.beginPath();
             for (let i = 0; i < points.length; i++) {
                 const point  = points[i];
@@ -41,6 +42,9 @@ function drawLine(initX: number, initY: number): Displayable {
 // ~-------------------VARIABLES-----------------~
 
 let isDrawing = false;
+let lineThickness = 3;
+
+
 let currentLine: Displayable | null = null;
 let points: Displayable[] = [];
 let redoStack: Displayable[] = [];
@@ -76,10 +80,23 @@ redoBtn.textContent = "Redo";
 buttonDiv.append(redoBtn);
 
 
+//Thin Button
+const thinBtn = document.createElement("button");
+thinBtn.textContent = "Thin";
+buttonDiv.append(thinBtn);
+
+//Thick Button
+const thickBtn = document.createElement("button");
+thickBtn.textContent = "Thick";
+buttonDiv.append(thickBtn);
+
+
 //Clear Button
 const clearBtn = document.createElement("button");
 clearBtn.textContent = "Clear";
 buttonDiv.append(clearBtn);
+
+
 
 
 app.append(buttonDiv);
@@ -93,7 +110,7 @@ const canvasContext = canvas.getContext("2d");
 if (!canvasContext) {
     throw new Error("canvas context don't exist");
 }
-canvasContext.lineWidth = 2;
+canvasContext.lineWidth = lineThickness;
 canvasContext.lineCap = "round";
 canvasContext.strokeStyle = "black";
 
@@ -104,7 +121,7 @@ canvasContext.strokeStyle = "black";
 
 function startDraw(event: MouseEvent) {
     isDrawing = true;
-    currentLine = drawLine(event.offsetX, event.offsetY);
+    currentLine = drawLine(event.offsetX, event.offsetY, lineThickness);
     points.push(currentLine);
 }
 
@@ -133,6 +150,23 @@ function redraw() {
     points.forEach((line) => line.display(canvasContext!));
 
 }
+
+function setThinStroke() {
+    lineThickness = 1;
+    updateSelectedTool(thinBtn);
+}
+
+function setThickStroke() {
+    lineThickness = 5;
+    updateSelectedTool(thickBtn);
+}
+
+function updateSelectedTool(selectedButton: HTMLButtonElement) {
+    thinBtn.classList.remove("selectedTool");
+    thickBtn.classList.remove("selectedTool");
+    selectedButton.classList.add("selectedTool");
+}
+
 
 
 // ~-------------------LISTENERS------------------~
@@ -177,3 +211,6 @@ redoBtn.addEventListener("click", () => {
 
     }
 })
+
+thinBtn.addEventListener("click", setThinStroke);
+thickBtn.addEventListener("click", setThickStroke);
