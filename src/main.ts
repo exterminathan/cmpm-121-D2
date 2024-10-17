@@ -4,13 +4,46 @@ const APP_NAME = "Canvas";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 
 document.title = APP_NAME;
+// ~------------------INTERFACES-----------------~
+// why no class :(
+
+interface Displayable {
+    display(context: CanvasRenderingContext2D): void;
+    drag(x: number, y: number): void;
+}
+
+
+function drawLine(initX: number, initY: number): Displayable {
+    const points: Array<{x: number; y: number}> = [{x: initX, y: initY}];
+
+    return {
+        display(ctx: CanvasRenderingContext2D) {
+            ctx.beginPath();
+            for (let i = 0; i < points.length; i++) {
+                const point  = points[i];
+                if (i === 0) {
+                    ctx.moveTo(point.x, point.y);
+                } else {
+                    ctx.lineTo(point.x, point.y);
+                }
+            }
+            ctx.stroke();
+        },
+        drag(x: number, y: number) {
+            points.push({x, y});
+        }
+    }
+
+}
+
 
 
 // ~-------------------VARIABLES-----------------~
 
 let isDrawing = false;
-let points: Array<Array<{x: number, y: number}>> = [];
-let redoStack: Array<Array<{x: number, y: number}>> = [];
+let currentLine: Displayable | null = null;
+let points: Displayable[] = [];
+let redoStack: Displayable[] = [];
 
 
 // ~------------------STATIC---------------------~
@@ -71,29 +104,24 @@ canvasContext.strokeStyle = "black";
 
 function startDraw(event: MouseEvent) {
     isDrawing = true;
-    points.push([]);
-    addPoint(event.offsetX, event.offsetY);
-}
-
-function addPoint(x: number, y: number) {
-    points[points.length - 1].push({x,y});
-
-    //send drawing changed event
-    const event = new CustomEvent("drawing-changed");
-    canvas.dispatchEvent(event);
+    currentLine = drawLine(event.offsetX, event.offsetY);
+    points.push(currentLine);
 }
 
 function draw(event: MouseEvent) {
     // also check here for context existing
     if (!isDrawing || !canvasContext) {return;}
+    currentLine?.drag(event.offsetX, event.offsetY);
 
-    addPoint(event.offsetX, event.offsetY);
+    const eventChanged = new CustomEvent("drawing-changed");
+    canvas.dispatchEvent(eventChanged);
 
 }
 
 function stopDraw(event: MouseEvent) {
     event;
     isDrawing = false;
+    currentLine = null;
 }
 
 function clearCanvas() {
@@ -102,21 +130,7 @@ function clearCanvas() {
 
 function redraw() {
     clearCanvas();
-
-    for (const p of points) {
-        // vs code keeps adding these ? but it doesn't compile without them so :/
-        canvasContext?.beginPath()
-        for (let i = 0; i < p.length; i++) {
-            const point  = p[i];
-            if (i === 0) {
-                canvasContext?.moveTo(point.x, point.y);
-            } else {
-                canvasContext?.lineTo(point.x, point.y);
-            }
-        }
-        canvasContext?.stroke();
-        
-    }
+    points.forEach((line) => line.display(canvasContext!));
 
 }
 
@@ -132,6 +146,7 @@ canvas.addEventListener("drawing-changed", redraw);
 
 clearBtn.addEventListener("click", () => {
     points = [];
+    redoStack = [];
     clearCanvas();
 })
 
@@ -139,23 +154,26 @@ clearBtn.addEventListener("click", () => {
 //Add to redo stack and remove from canvas
 undoBtn.addEventListener("click", () => {
     if (points.length > 0) {
-        const last = points.pop();
-        if (last) {
-            redoStack.push(last);
+        const lastLine = points.pop();
+        if (lastLine) {
+            redoStack.push(lastLine);
         }
-        const event = new CustomEvent("drawing-changed");
-        canvas.dispatchEvent(event);
+
+        const eventChanged = new CustomEvent("drawing-changed");
+        canvas.dispatchEvent(eventChanged);
     }
-})
+});
 
 //Remove from redo stack and add to canvas
 redoBtn.addEventListener("click", () => {
     if (redoStack.length > 0) {
-        const last = redoStack.pop();
-        if (last) {
-            points.push(last);
+        const redoLine = redoStack.pop();
+        if (redoLine) {
+            points.push(redoLine);
         }
-        const event = new CustomEvent("drawing-changed");
-        canvas.dispatchEvent(event);
+
+        const eventChanged = new CustomEvent("drawing-changed");
+        canvas.dispatchEvent(eventChanged);
+
     }
 })
