@@ -16,7 +16,8 @@
 
 canvas {
   border: 3px solid black;
-  filter: drop-shadow(3px 3px 3px rgb(173, 173, 173) ); 
+  filter: drop-shadow(2px 2px 3px rgb(173, 173, 173) ); 
+  cursor: none;
 }
 
 

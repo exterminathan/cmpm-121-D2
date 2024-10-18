@@ -4,24 +4,27 @@ const APP_NAME = "Canvas";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 
 document.title = APP_NAME;
+
 // ~------------------INTERFACES-----------------~
-// why no class :(
 
 interface Displayable {
     display(context: CanvasRenderingContext2D): void;
     drag(x: number, y: number): void;
 }
 
+interface Previewable {
+    draw(context: CanvasRenderingContext2D): void;
+}
 
 function drawLine(initX: number, initY: number, thickness: number): Displayable {
-    const points: Array<{x: number; y: number}> = [{x: initX, y: initY}];
+    const points: Array<{ x: number; y: number }> = [{ x: initX, y: initY }];
 
     return {
         display(ctx: CanvasRenderingContext2D) {
             ctx.lineWidth = thickness;
             ctx.beginPath();
             for (let i = 0; i < points.length; i++) {
-                const point  = points[i];
+                const point = points[i];
                 if (i === 0) {
                     ctx.moveTo(point.x, point.y);
                 } else {
@@ -31,39 +34,51 @@ function drawLine(initX: number, initY: number, thickness: number): Displayable 
             ctx.stroke();
         },
         drag(x: number, y: number) {
-            points.push({x, y});
-        }
-    }
-
+            points.push({ x, y });
+        },
+    };
 }
 
+function createToolPreview(x: number, y: number, thickness: number): Previewable {
+    return {
+        draw(ctx: CanvasRenderingContext2D) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            points.forEach((line) => line.display(ctx));
 
+
+            ctx.beginPath();
+            ctx.arc(x, y, thickness / 2, 0, Math.PI * 2);
+            ctx.strokeStyle = "black";
+            ctx.stroke();
+
+            ctx.fillStyle = "black";
+            ctx.fill();
+        },
+    };
+}
 
 // ~-------------------VARIABLES-----------------~
 
 let isDrawing = false;
-let lineThickness = 3;
-
+let lineThickness = 7;
 
 let currentLine: Displayable | null = null;
 let points: Displayable[] = [];
 let redoStack: Displayable[] = [];
 
+let toolPreview: Previewable | null = null;
 
 // ~------------------STATIC---------------------~
 
 //Title
-const titleEL = document.createElement("h1");
-titleEL.textContent = APP_NAME;
-
-app.append(titleEL);
-
+const titleELement = document.createElement("h1");
+titleELement.textContent = APP_NAME;
+app.append(titleELement);
 
 //Main Canvas
 const canvas = document.createElement("canvas");
 canvas.width = 256;
 canvas.height = 256;
-
 app.append(canvas);
 
 //Buttons Div
@@ -79,7 +94,6 @@ const redoBtn = document.createElement("button");
 redoBtn.textContent = "Redo";
 buttonDiv.append(redoBtn);
 
-
 //Thin Button
 const thinBtn = document.createElement("button");
 thinBtn.textContent = "Thin";
@@ -90,14 +104,10 @@ const thickBtn = document.createElement("button");
 thickBtn.textContent = "Thick";
 buttonDiv.append(thickBtn);
 
-
 //Clear Button
 const clearBtn = document.createElement("button");
 clearBtn.textContent = "Clear";
 buttonDiv.append(clearBtn);
-
-
-
 
 app.append(buttonDiv);
 
@@ -105,10 +115,9 @@ app.append(buttonDiv);
 // ~--------------CANVAS STUFF-------------------~
 
 const canvasContext = canvas.getContext("2d");
-// apparently it won't compile if you don't check if the context can be created
-// so check here
+
 if (!canvasContext) {
-    throw new Error("canvas context don't exist");
+    throw new Error("canvas context doesn't exist");
 }
 canvasContext.lineWidth = lineThickness;
 canvasContext.lineCap = "round";
@@ -123,20 +132,17 @@ function startDraw(event: MouseEvent) {
     isDrawing = true;
     currentLine = drawLine(event.offsetX, event.offsetY, lineThickness);
     points.push(currentLine);
+    toolPreview = null;
 }
 
 function draw(event: MouseEvent) {
     // also check here for context existing
-    if (!isDrawing || !canvasContext) {return;}
+    if (!isDrawing || !canvasContext) return;
     currentLine?.drag(event.offsetX, event.offsetY);
-
-    const eventChanged = new CustomEvent("drawing-changed");
-    canvas.dispatchEvent(eventChanged);
-
+    redraw();
 }
 
-function stopDraw(event: MouseEvent) {
-    event;
+function stopDraw() {
     isDrawing = false;
     currentLine = null;
 }
@@ -149,16 +155,22 @@ function redraw() {
     clearCanvas();
     points.forEach((line) => line.display(canvasContext!));
 
+    if (toolPreview) {
+        toolPreview.draw(canvasContext!);
+    }
 }
 
 function setThinStroke() {
-    lineThickness = 1;
+    lineThickness = 5;
     updateSelectedTool(thinBtn);
+    redraw();
 }
 
 function setThickStroke() {
-    lineThickness = 5;
+    lineThickness = 9;
     updateSelectedTool(thickBtn);
+    redraw();
+
 }
 
 function updateSelectedTool(selectedButton: HTMLButtonElement) {
@@ -167,7 +179,16 @@ function updateSelectedTool(selectedButton: HTMLButtonElement) {
     selectedButton.classList.add("selectedTool");
 }
 
+function handleToolMoved(event: MouseEvent) {
+    if (isDrawing || !canvasContext) return;
 
+    toolPreview = createToolPreview(event.offsetX, event.offsetY, lineThickness);
+
+    const toolMovedEvent = new Event("tool-moved");
+    canvas.dispatchEvent(toolMovedEvent);
+
+    redraw();
+}
 
 // ~-------------------LISTENERS------------------~
 
@@ -176,25 +197,24 @@ canvas.addEventListener("mousemove", draw);
 canvas.addEventListener("mouseup", stopDraw);
 canvas.addEventListener("mouseleave", stopDraw);
 
-canvas.addEventListener("drawing-changed", redraw);
+canvas.addEventListener("mousemove", handleToolMoved);
+
+canvas.addEventListener("tool-moved", () => {
+    console.log("Tool moved event fired");
+});
 
 clearBtn.addEventListener("click", () => {
     points = [];
     redoStack = [];
     clearCanvas();
-})
-
+});
 
 //Add to redo stack and remove from canvas
 undoBtn.addEventListener("click", () => {
     if (points.length > 0) {
         const lastLine = points.pop();
-        if (lastLine) {
-            redoStack.push(lastLine);
-        }
-
-        const eventChanged = new CustomEvent("drawing-changed");
-        canvas.dispatchEvent(eventChanged);
+        redoStack.push(lastLine!);
+        redraw();
     }
 });
 
@@ -202,15 +222,10 @@ undoBtn.addEventListener("click", () => {
 redoBtn.addEventListener("click", () => {
     if (redoStack.length > 0) {
         const redoLine = redoStack.pop();
-        if (redoLine) {
-            points.push(redoLine);
-        }
-
-        const eventChanged = new CustomEvent("drawing-changed");
-        canvas.dispatchEvent(eventChanged);
-
+        points.push(redoLine!);
+        redraw();
     }
-})
+});
 
 thinBtn.addEventListener("click", setThinStroke);
 thickBtn.addEventListener("click", setThickStroke);
