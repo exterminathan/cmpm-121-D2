@@ -16,7 +16,6 @@ interface Previewable {
     draw(context: CanvasRenderingContext2D): void;
 }
 
-
 // ~------------------COMMANDS------------------~
 
 function drawLine(initX: number, initY: number, thickness: number): Displayable {
@@ -76,7 +75,6 @@ let isDrawing = false;
 let lineThickness = 7;
 let isStickerMode = false;
 
-
 let currentLine: Displayable | null = null;
 let points: Displayable[] = [];
 let redoStack: Displayable[] = [];
@@ -127,10 +125,8 @@ buttonDiv.append(clearBtn);
 
 app.append(buttonDiv);
 
-
 //Lower Buttons Div
 const lowerButtonDiv = document.createElement("div");
-
 
 //Sticker Buttons
 stickers.forEach((sticker) => {
@@ -148,6 +144,27 @@ stickers.forEach((sticker) => {
     lowerButtonDiv.append(stickerBtn);
 });
 
+//Custom Sticker Button
+const customStickerBtn = document.createElement("button");
+customStickerBtn.textContent = "🆕";
+lowerButtonDiv.append(customStickerBtn);
+
+customStickerBtn.addEventListener("click", () => {
+    const newSticker = prompt("Enter your custom sticker:", "🔥");
+    if (newSticker) {
+        stickers.push(newSticker);
+        const stickerBtn = document.createElement("button");
+        stickerBtn.textContent = newSticker;
+        stickerBtn.addEventListener("click", () => {
+            isStickerMode = true;
+            selectedSticker = newSticker;
+            const toolMovedEvent = new Event("tool-moved");
+            canvas.dispatchEvent(toolMovedEvent);
+        });
+        lowerButtonDiv.insertBefore(stickerBtn, customStickerBtn);
+    }
+});
+
 app.append(lowerButtonDiv);
 
 // ~--------------CANVAS STUFF-------------------~
@@ -161,7 +178,6 @@ canvasContext.lineWidth = lineThickness;
 canvasContext.lineCap = "round";
 canvasContext.strokeStyle = "black";
 
-
 // ~------------------FUNCTIONS------------------~
 
 function startDraw(event: MouseEvent) {
@@ -174,7 +190,6 @@ function startDraw(event: MouseEvent) {
 }
 
 function draw(event: MouseEvent) {
-    // also check here for context existing
     if (!isDrawing || !canvasContext) return;
     currentLine?.drag(event.offsetX, event.offsetY);
     redraw();
@@ -208,7 +223,6 @@ function setThickStroke() {
     lineThickness = 9;
     updateSelectedTool(thickBtn);
     redraw();
-
 }
 
 function updateSelectedTool(selectedButton: HTMLButtonElement) {
@@ -250,7 +264,6 @@ function placeSticker(event: MouseEvent) {
     redraw();
 }
 
-
 // ~-------------------LISTENERS------------------~
 
 canvas.addEventListener("mousedown", startDraw);
@@ -271,7 +284,6 @@ clearBtn.addEventListener("click", () => {
     clearCanvas();
 });
 
-//Add to redo stack and remove from canvas
 undoBtn.addEventListener("click", () => {
     if (points.length > 0) {
         const lastLine = points.pop();
@@ -280,7 +292,6 @@ undoBtn.addEventListener("click", () => {
     }
 });
 
-//Remove from redo stack and add to canvas
 redoBtn.addEventListener("click", () => {
     if (redoStack.length > 0) {
         const redoLine = redoStack.pop();
@@ -289,8 +300,6 @@ redoBtn.addEventListener("click", () => {
     }
 });
 
-
-//Change to thin thickness 5
 thinBtn.addEventListener("click", () => {
     isStickerMode = false;
     lineThickness = 5;
@@ -298,14 +307,12 @@ thinBtn.addEventListener("click", () => {
     redraw();
 });
 
-//Change to thick thickness 9
 thickBtn.addEventListener("click", () => {
     isStickerMode = false; 
     lineThickness = 9;
     toolPreview = createLinePreview(0, 0, lineThickness);
     redraw();
 });
-
 
 thinBtn.addEventListener("click", setThinStroke);
 thickBtn.addEventListener("click", setThickStroke);
