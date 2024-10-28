@@ -44,7 +44,7 @@ function drawLine(initX: number, initY: number, thickness: number): Displayable 
 function createLinePreview(x: number, y: number, thickness: number): Previewable {
     return {
         draw(ctx: CanvasRenderingContext2D) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); 
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             points.forEach((line) => line.display(ctx));
 
             ctx.beginPath();
@@ -58,11 +58,24 @@ function createLinePreview(x: number, y: number, thickness: number): Previewable
 function createStickerPreview(x: number, y: number, sticker: string): Previewable {
     return {
         draw(ctx: CanvasRenderingContext2D) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); 
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             points.forEach((line) => line.display(ctx));
 
             ctx.font = "24px Arial";
             ctx.fillText(sticker, x, y);
+        },
+    };
+}
+
+function createSticker(x: number, y: number, sticker: string): Displayable {
+    return {
+        display(ctx: CanvasRenderingContext2D) {
+            ctx.font = "24px Arial";
+            ctx.fillText(sticker, x, y);
+        },
+        drag(newX: number, newY: number) {
+            x = newX;
+            y = newY;
         },
     };
 }
@@ -123,6 +136,11 @@ const clearBtn = document.createElement("button");
 clearBtn.textContent = "Clear";
 buttonDiv.append(clearBtn);
 
+//Export Button
+const exportBtn = document.createElement("button");
+exportBtn.textContent = "Export";
+buttonDiv.append(exportBtn);
+
 app.append(buttonDiv);
 
 //Lower Buttons Div
@@ -135,12 +153,12 @@ stickers.forEach((sticker) => {
 
     //Listener has to be created here as sticker amt can vary
     stickerBtn.addEventListener("click", () => {
-        isStickerMode = true; 
+        isStickerMode = true;
         selectedSticker = sticker;
-
         const toolMovedEvent = new Event("tool-moved");
         canvas.dispatchEvent(toolMovedEvent);
     });
+
     lowerButtonDiv.append(stickerBtn);
 });
 
@@ -181,7 +199,7 @@ canvasContext.strokeStyle = "black";
 // ~------------------FUNCTIONS------------------~
 
 function startDraw(event: MouseEvent) {
-    if (isStickerMode) {return;}
+    if (isStickerMode) return;
     isDrawing = true;
     currentLine = drawLine(event.offsetX, event.offsetY, lineThickness);
     points.push(currentLine);
@@ -213,6 +231,39 @@ function redraw() {
     }
 }
 
+function exportCanvas() {
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = 1024;
+    exportCanvas.height = 1024;
+    const exportContext = exportCanvas.getContext("2d");
+
+    if (!exportContext) return;
+
+    exportContext.scale(4, 4);
+    points.forEach((line) => line.display(exportContext));
+
+    const anchor = document.createElement("a");
+    anchor.href = exportCanvas.toDataURL("image/png");
+    anchor.download = "canvas.png";
+    anchor.click();
+}
+
+function placeSticker(event: MouseEvent) {
+    if (!isStickerMode || !selectedSticker) return;
+
+    const stickerCommand = createSticker(event.offsetX, event.offsetY, selectedSticker);
+    points.push(stickerCommand);
+    redraw();
+}
+
+function updateSelectedTool(selectedButton: HTMLButtonElement) {
+    isStickerMode = false;
+    selectedSticker = null;
+    thinBtn.classList.remove("selectedTool");
+    thickBtn.classList.remove("selectedTool");
+    selectedButton.classList.add("selectedTool");
+}
+
 function setThinStroke() {
     lineThickness = 5;
     updateSelectedTool(thinBtn);
@@ -223,12 +274,6 @@ function setThickStroke() {
     lineThickness = 9;
     updateSelectedTool(thickBtn);
     redraw();
-}
-
-function updateSelectedTool(selectedButton: HTMLButtonElement) {
-    thinBtn.classList.remove("selectedTool");
-    thickBtn.classList.remove("selectedTool");
-    selectedButton.classList.add("selectedTool");
 }
 
 function handleToolMoved(event: MouseEvent) {
@@ -243,27 +288,6 @@ function handleToolMoved(event: MouseEvent) {
     redraw();
 }
 
-function createSticker(x: number, y: number, sticker: string): Displayable {
-    return {
-        display(ctx: CanvasRenderingContext2D) {
-            ctx.font = "24px Arial"; 
-            ctx.fillText(sticker, x, y);
-        },
-        drag(newX: number, newY: number) {
-            x = newX;
-            y = newY;
-        },
-    };
-}
-
-function placeSticker(event: MouseEvent) {
-    if (!isStickerMode || !selectedSticker) return;
-
-    const stickerCommand = createSticker(event.offsetX, event.offsetY, selectedSticker);
-    points.push(stickerCommand);
-    redraw();
-}
-
 // ~-------------------LISTENERS------------------~
 
 canvas.addEventListener("mousedown", startDraw);
@@ -274,9 +298,7 @@ canvas.addEventListener("mouseleave", stopDraw);
 canvas.addEventListener("mousedown", placeSticker);
 canvas.addEventListener("mousemove", handleToolMoved);
 
-canvas.addEventListener("tool-moved", () => {
-    console.log("Tool moved event fired");
-});
+exportBtn.addEventListener("click", exportCanvas);
 
 clearBtn.addEventListener("click", () => {
     points = [];
@@ -298,20 +320,6 @@ redoBtn.addEventListener("click", () => {
         points.push(redoLine!);
         redraw();
     }
-});
-
-thinBtn.addEventListener("click", () => {
-    isStickerMode = false;
-    lineThickness = 5;
-    toolPreview = createLinePreview(0, 0, lineThickness);
-    redraw();
-});
-
-thickBtn.addEventListener("click", () => {
-    isStickerMode = false; 
-    lineThickness = 9;
-    toolPreview = createLinePreview(0, 0, lineThickness);
-    redraw();
 });
 
 thinBtn.addEventListener("click", setThinStroke);
