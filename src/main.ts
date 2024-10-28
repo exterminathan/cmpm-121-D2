@@ -61,7 +61,7 @@ function createStickerPreview(x: number, y: number, sticker: string): Previewabl
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             points.forEach((line) => line.display(ctx));
 
-            ctx.font = "24px Arial";
+            ctx.font = "32px Arial";
             ctx.fillText(sticker, x, y);
         },
     };
@@ -70,7 +70,7 @@ function createStickerPreview(x: number, y: number, sticker: string): Previewabl
 function createSticker(x: number, y: number, sticker: string): Displayable {
     return {
         display(ctx: CanvasRenderingContext2D) {
-            ctx.font = "24px Arial";
+            ctx.font = "32px Arial";
             ctx.fillText(sticker, x, y);
         },
         drag(newX: number, newY: number) {
@@ -82,7 +82,7 @@ function createSticker(x: number, y: number, sticker: string): Displayable {
 
 // ~-------------------VARIABLES-----------------~
 
-const stickers = ["⭐", "💀", "🤡"];
+const stickers = ["😆", "💀", "🎃"];
 
 let isDrawing = false;
 let lineThickness = 7;
@@ -108,43 +108,58 @@ canvas.width = 256;
 canvas.height = 256;
 app.append(canvas);
 
-//Buttons Div
-const buttonDiv = document.createElement("div");
+
+// First Button Layer
+const layer1 = document.createElement("div");
 
 //Undo Button
 const undoBtn = document.createElement("button");
 undoBtn.textContent = "Undo";
-buttonDiv.append(undoBtn);
+layer1.append(undoBtn);
 
 //Redo Button
 const redoBtn = document.createElement("button");
 redoBtn.textContent = "Redo";
-buttonDiv.append(redoBtn);
-
-//Thin Button
-const thinBtn = document.createElement("button");
-thinBtn.textContent = "Thin";
-buttonDiv.append(thinBtn);
-
-//Thick Button
-const thickBtn = document.createElement("button");
-thickBtn.textContent = "Thick";
-buttonDiv.append(thickBtn);
+layer1.append(redoBtn);
 
 //Clear Button
 const clearBtn = document.createElement("button");
 clearBtn.textContent = "Clear";
-buttonDiv.append(clearBtn);
+layer1.append(clearBtn);
 
 //Export Button
 const exportBtn = document.createElement("button");
 exportBtn.textContent = "Export";
-buttonDiv.append(exportBtn);
+layer1.append(exportBtn);
 
-app.append(buttonDiv);
+app.append(layer1);
 
-//Lower Buttons Div
-const lowerButtonDiv = document.createElement("div");
+
+// Second Button Layer
+const layer2 = document.createElement("div");
+
+//Thin Button
+const thinBtn = document.createElement("button");
+thinBtn.textContent = "Thin";
+layer2.append(thinBtn);
+
+//Thick Button
+const thickBtn = document.createElement("button");
+thickBtn.textContent = "Thick";
+layer2.append(thickBtn);
+
+//Custom Sticker Button
+const customStickerBtn = document.createElement("button");
+customStickerBtn.textContent = "🆕";
+layer2.append(customStickerBtn);
+
+app.append(layer2);
+
+
+
+
+// Third Button Layer
+const layer3 = document.createElement("div");
 
 //Sticker Buttons
 stickers.forEach((sticker) => {
@@ -159,17 +174,15 @@ stickers.forEach((sticker) => {
         canvas.dispatchEvent(toolMovedEvent);
     });
 
-    lowerButtonDiv.append(stickerBtn);
+    layer3.append(stickerBtn);
 });
 
-//Custom Sticker Button
-const customStickerBtn = document.createElement("button");
-customStickerBtn.textContent = "🆕";
-lowerButtonDiv.append(customStickerBtn);
+
 
 customStickerBtn.addEventListener("click", () => {
     const newSticker = prompt("Enter your custom sticker:", "🔥");
-    if (newSticker) {
+    //prevent duplicates
+    if (newSticker && !stickers.some(emoji => emoji === newSticker)) {
         stickers.push(newSticker);
         const stickerBtn = document.createElement("button");
         stickerBtn.textContent = newSticker;
@@ -179,11 +192,11 @@ customStickerBtn.addEventListener("click", () => {
             const toolMovedEvent = new Event("tool-moved");
             canvas.dispatchEvent(toolMovedEvent);
         });
-        lowerButtonDiv.insertBefore(stickerBtn, customStickerBtn);
+        layer3.append(stickerBtn);
     }
 });
 
-app.append(lowerButtonDiv);
+app.append(layer3);
 
 // ~--------------CANVAS STUFF-------------------~
 
@@ -265,13 +278,13 @@ function updateSelectedTool(selectedButton: HTMLButtonElement) {
 }
 
 function setThinStroke() {
-    lineThickness = 5;
+    lineThickness = 3;
     updateSelectedTool(thinBtn);
     redraw();
 }
 
 function setThickStroke() {
-    lineThickness = 9;
+    lineThickness = 15;
     updateSelectedTool(thickBtn);
     redraw();
 }
