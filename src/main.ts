@@ -18,12 +18,13 @@ interface Previewable {
 
 // ~------------------COMMANDS------------------~
 
-function drawLine(initX: number, initY: number, thickness: number): Displayable {
+function drawLine(initX: number, initY: number, thickness: number, color: string): Displayable {
     const points: Array<{ x: number; y: number }> = [{ x: initX, y: initY }];
 
     return {
         display(ctx: CanvasRenderingContext2D) {
             ctx.lineWidth = thickness;
+            ctx.strokeStyle = color;
             ctx.beginPath();
             for (let i = 0; i < points.length; i++) {
                 const point = points[i];
@@ -41,7 +42,7 @@ function drawLine(initX: number, initY: number, thickness: number): Displayable 
     };
 }
 
-function createLinePreview(x: number, y: number, thickness: number): Previewable {
+function createLinePreview(x: number, y: number, thickness: number, color: string): Previewable {
     return {
         draw(ctx: CanvasRenderingContext2D) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -49,7 +50,7 @@ function createLinePreview(x: number, y: number, thickness: number): Previewable
 
             ctx.beginPath();
             ctx.arc(x, y, thickness / 2, 0, Math.PI * 2);
-            ctx.fillStyle = "black";
+            ctx.fillStyle = color;
             ctx.fill();
         },
     };
@@ -198,6 +199,23 @@ customStickerBtn.addEventListener("click", () => {
 
 app.append(layer3);
 
+
+// Color Control Layer
+const layer4 = document.createElement("div");
+
+//Color Slider
+const colorSlider = document.createElement("input");
+colorSlider.type = "range";
+colorSlider.min = "0";
+colorSlider.max = "360";
+colorSlider.value = "0";
+
+layer4.append(colorSlider);
+
+app.append(layer4);
+
+
+
 // ~--------------CANVAS STUFF-------------------~
 
 const canvasContext = canvas.getContext("2d");
@@ -214,7 +232,7 @@ canvasContext.strokeStyle = "black";
 function startDraw(event: MouseEvent) {
     if (isStickerMode) return;
     isDrawing = true;
-    currentLine = drawLine(event.offsetX, event.offsetY, lineThickness);
+    currentLine = drawLine(event.offsetX, event.offsetY, lineThickness, getColor());
     points.push(currentLine);
     toolPreview = null;
     redraw();
@@ -295,10 +313,15 @@ function handleToolMoved(event: MouseEvent) {
     if (isStickerMode && selectedSticker) {
         toolPreview = createStickerPreview(event.offsetX, event.offsetY, selectedSticker);
     } else {
-        toolPreview = createLinePreview(event.offsetX, event.offsetY, lineThickness);
+        toolPreview = createLinePreview(event.offsetX, event.offsetY, lineThickness, getColor());
     }
 
     redraw();
+}
+
+function getColor() {
+    const hue = colorSlider.value;
+    return `hsl(${hue}, 100%, 50%)`;
 }
 
 // ~-------------------LISTENERS------------------~
