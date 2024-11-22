@@ -98,76 +98,97 @@ let selectedSticker: string | null = null;
 
 // ~------------------STATIC---------------------~
 
-//Title
+// Title
 const titleELement = document.createElement("h1");
 titleELement.textContent = APP_NAME;
 app.append(titleELement);
 
-//Main Canvas
-const canvas = document.createElement("canvas");
-canvas.width = 256;
-canvas.height = 256;
-app.append(canvas);
+// Canvas Container
+const canvasContainer = document.createElement("div");
+canvasContainer.style.display = "flex";
+canvasContainer.style.flexDirection = "row";
+canvasContainer.style.alignItems = "flex-start";
+canvasContainer.style.justifyContent = "center";
 
+// Main Canvas
+const canvas = document.createElement("canvas");
+canvas.width = 512;
+canvas.height = 512;
+canvasContainer.append(canvas);
+
+// Emoji Buttons Div (Layer 3)
+const layer3 = document.createElement("div");
+layer3.classList.add("emoji-container");
+canvasContainer.append(layer3);
+
+// Append the canvasContainer to the app
+app.append(canvasContainer);
 
 // First Button Layer
 const layer1 = document.createElement("div");
 
-//Undo Button
+// Undo Button
 const undoBtn = document.createElement("button");
 undoBtn.textContent = "Undo";
 layer1.append(undoBtn);
 
-//Redo Button
+// Redo Button
 const redoBtn = document.createElement("button");
 redoBtn.textContent = "Redo";
 layer1.append(redoBtn);
 
-//Clear Button
+// Clear Button
 const clearBtn = document.createElement("button");
 clearBtn.textContent = "Clear";
 layer1.append(clearBtn);
 
-//Export Button
+// Export Button
 const exportBtn = document.createElement("button");
 exportBtn.textContent = "Export";
 layer1.append(exportBtn);
 
 app.append(layer1);
 
-
 // Second Button Layer
 const layer2 = document.createElement("div");
 
-//Thin Button
+// Thin Button
 const thinBtn = document.createElement("button");
 thinBtn.textContent = "Thin";
 layer2.append(thinBtn);
 
-//Thick Button
+// Thick Button
 const thickBtn = document.createElement("button");
 thickBtn.textContent = "Thick";
 layer2.append(thickBtn);
 
-//Custom Sticker Button
+// Custom Sticker Button
 const customStickerBtn = document.createElement("button");
 customStickerBtn.textContent = "🆕";
 layer2.append(customStickerBtn);
 
 app.append(layer2);
 
+// Color Control Layer
+const layer4 = document.createElement("div");
 
+// Color Slider
+const colorSlider = document.createElement("input");
+colorSlider.type = "range";
+colorSlider.min = "0";
+colorSlider.max = "360";
+colorSlider.value = "0";
 
+layer4.append(colorSlider);
 
-// Third Button Layer
-const layer3 = document.createElement("div");
+app.append(layer4);
 
-//Sticker Buttons
+// Sticker Buttons
 stickers.forEach((sticker) => {
     const stickerBtn = document.createElement("button");
     stickerBtn.textContent = sticker;
 
-    //Listener has to be created here as sticker amt can vary
+    // Listener for sticker buttons
     stickerBtn.addEventListener("click", () => {
         isStickerMode = true;
         selectedSticker = sticker;
@@ -178,12 +199,10 @@ stickers.forEach((sticker) => {
     layer3.append(stickerBtn);
 });
 
-
-
+// Custom Sticker Button Event Listener
 customStickerBtn.addEventListener("click", () => {
     const newSticker = prompt("Enter your custom sticker:", "🔥");
-    //prevent duplicates
-    if (newSticker && !stickers.some(emoji => emoji === newSticker)) {
+    if (newSticker && !stickers.some((emoji) => emoji === newSticker)) {
         stickers.push(newSticker);
         const stickerBtn = document.createElement("button");
         stickerBtn.textContent = newSticker;
@@ -197,24 +216,7 @@ customStickerBtn.addEventListener("click", () => {
     }
 });
 
-app.append(layer3);
-
-
-// Color Control Layer
-const layer4 = document.createElement("div");
-
-//Color Slider
-const colorSlider = document.createElement("input");
-colorSlider.type = "range";
-colorSlider.min = "0";
-colorSlider.max = "360";
-colorSlider.value = "0";
-
-layer4.append(colorSlider);
-
-app.append(layer4);
-
-
+updateSliderThumbColor(colorSlider);
 
 // ~--------------CANVAS STUFF-------------------~
 
@@ -287,6 +289,13 @@ function placeSticker(event: MouseEvent) {
     redraw();
 }
 
+function updateSliderThumbColor(slider: HTMLInputElement) {
+    const hue = slider.value;
+    const color = `hsl(${hue}, 100%, 50%)`;
+    slider.style.setProperty("--thumb-color", color);
+}
+
+
 function updateSelectedTool(selectedButton: HTMLButtonElement) {
     isStickerMode = false;
     selectedSticker = null;
@@ -357,6 +366,8 @@ redoBtn.addEventListener("click", () => {
         redraw();
     }
 });
+
+colorSlider.addEventListener("input", () => updateSliderThumbColor(colorSlider));
 
 thinBtn.addEventListener("click", setThinStroke);
 thickBtn.addEventListener("click", setThickStroke);
