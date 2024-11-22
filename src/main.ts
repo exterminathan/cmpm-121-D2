@@ -18,95 +18,67 @@ interface Previewable {
 
 // ~------------------COMMANDS------------------~
 
-class LineCommand implements Displayable {
-    private points: Array<{ x: number; y: number }>;
-    private thickness: number;
-    private color: string;
+function drawLine(initX: number, initY: number, thickness: number, color: string): Displayable {
+    const points: Array<{ x: number; y: number }> = [{ x: initX, y: initY }];
 
-    constructor(initX: number, initY: number, thickness: number, color: string) {
-        this.points = [{ x: initX, y: initY }];
-        this.thickness = thickness;
-        this.color = color;
-    }
-
-    display(ctx: CanvasRenderingContext2D): void {
-        ctx.lineWidth = this.thickness;
-        ctx.strokeStyle = this.color;
-        ctx.beginPath();
-        for (let i = 0; i < this.points.length; i++) {
-            const point = this.points[i];
-            if (i === 0) {
-                ctx.moveTo(point.x, point.y);
-            } else {
-                ctx.lineTo(point.x, point.y);
+    return {
+        display(ctx: CanvasRenderingContext2D) {
+            ctx.lineWidth = thickness;
+            ctx.strokeStyle = color;
+            ctx.beginPath();
+            for (let i = 0; i < points.length; i++) {
+                const point = points[i];
+                if (i === 0) {
+                    ctx.moveTo(point.x, point.y);
+                } else {
+                    ctx.lineTo(point.x, point.y);
+                }
             }
-        }
-        ctx.stroke();
-    }
-
-    drag(x: number, y: number): void {
-        this.points.push({ x, y });
-    }
+            ctx.stroke();
+        },
+        drag(x: number, y: number) {
+            points.push({ x, y });
+        },
+    };
 }
 
-class LinePreview implements Previewable {
-    private x: number;
-    private y: number;
-    private thickness: number;
-    private color: string;
+function createLinePreview(x: number, y: number, thickness: number, color: string): Previewable {
+    return {
+        draw(ctx: CanvasRenderingContext2D) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            points.forEach((line) => line.display(ctx));
 
-    constructor(x: number, y: number, thickness: number, color: string) {
-        this.x = x;
-        this.y = y;
-        this.thickness = thickness;
-        this.color = color;
-    }
-
-    draw(ctx: CanvasRenderingContext2D): void {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.thickness / 2, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-    }
+            ctx.beginPath();
+            ctx.arc(x, y, thickness / 2, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+        },
+    };
 }
 
-class StickerCommand implements Displayable {
-    private x: number;
-    private y: number;
-    private sticker: string;
+function createStickerPreview(x: number, y: number, sticker: string): Previewable {
+    return {
+        draw(ctx: CanvasRenderingContext2D) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            points.forEach((line) => line.display(ctx));
 
-    constructor(x: number, y: number, sticker: string) {
-        this.x = x;
-        this.y = y;
-        this.sticker = sticker;
-    }
-
-    display(ctx: CanvasRenderingContext2D): void {
-        ctx.font = "32px Arial";
-        ctx.fillText(this.sticker, this.x, this.y);
-    }
-
-    drag(newX: number, newY: number): void {
-        this.x = newX;
-        this.y = newY;
-    }
+            ctx.font = "32px Arial";
+            ctx.fillText(sticker, x, y);
+        },
+    };
 }
 
-class StickerPreview implements Previewable {
-    private x: number;
-    private y: number;
-    private sticker: string;
-
-    constructor(x: number, y: number, sticker: string) {
-        this.x = x;
-        this.y = y;
-        this.sticker = sticker;
-    }
-
-    draw(ctx: CanvasRenderingContext2D): void {
-        ctx.font = "32px Arial";
-        ctx.fillText(this.sticker, this.x, this.y);
-    }
+function createSticker(x: number, y: number, sticker: string): Displayable {
+    return {
+        display(ctx: CanvasRenderingContext2D) {
+            ctx.font = "32px Arial";
+            ctx.fillText(sticker, x, y);
+        },
+        drag(newX: number, newY: number) {
+            x = newX;
+            y = newY;
+        },
+    };
 }
 
 // ~-------------------VARIABLES-----------------~
@@ -118,7 +90,7 @@ let lineThickness = 7;
 let isStickerMode = false;
 
 let currentLine: Displayable | null = null;
-let commands: Displayable[] = [];
+let points: Displayable[] = [];
 let redoStack: Displayable[] = [];
 
 let toolPreview: Previewable | null = null;
@@ -262,8 +234,8 @@ canvasContext.strokeStyle = "black";
 function startDraw(event: MouseEvent) {
     if (isStickerMode) return;
     isDrawing = true;
-    currentLine = new LineCommand(event.offsetX, event.offsetY, lineThickness, getColor());
-    commands.push(currentLine);
+    currentLine = drawLine(event.offsetX, event.offsetY, lineThickness, getColor());
+    points.push(currentLine);
     toolPreview = null;
     redraw();
 }
@@ -285,7 +257,7 @@ function clearCanvas() {
 
 function redraw() {
     clearCanvas();
-    commands.forEach((line) => line.display(canvasContext!));
+    points.forEach((line) => line.display(canvasContext!));
 
     if (toolPreview) {
         toolPreview.draw(canvasContext!);
@@ -301,7 +273,7 @@ function exportCanvas() {
     if (!exportContext) return;
 
     exportContext.scale(4, 4);
-    commands.forEach((line) => line.display(exportContext));
+    points.forEach((line) => line.display(exportContext));
 
     const anchor = document.createElement("a");
     anchor.href = exportCanvas.toDataURL("image/png");
@@ -312,8 +284,8 @@ function exportCanvas() {
 function placeSticker(event: MouseEvent) {
     if (!isStickerMode || !selectedSticker) return;
 
-    const stickerCommand = new StickerCommand(event.offsetX, event.offsetY, selectedSticker);
-    commands.push(stickerCommand);
+    const stickerCommand = createSticker(event.offsetX, event.offsetY, selectedSticker);
+    points.push(stickerCommand);
     redraw();
 }
 
@@ -322,6 +294,7 @@ function updateSliderThumbColor(slider: HTMLInputElement) {
     const color = `hsl(${hue}, 100%, 50%)`;
     slider.style.setProperty("--thumb-color", color);
 }
+
 
 function updateSelectedTool(selectedButton: HTMLButtonElement) {
     isStickerMode = false;
@@ -347,9 +320,9 @@ function handleToolMoved(event: MouseEvent) {
     if (isDrawing || !canvasContext) return;
 
     if (isStickerMode && selectedSticker) {
-        toolPreview = new StickerPreview(event.offsetX, event.offsetY, selectedSticker);
+        toolPreview = createStickerPreview(event.offsetX, event.offsetY, selectedSticker);
     } else {
-        toolPreview = new LinePreview(event.offsetX, event.offsetY, lineThickness, getColor());
+        toolPreview = createLinePreview(event.offsetX, event.offsetY, lineThickness, getColor());
     }
 
     redraw();
@@ -373,14 +346,14 @@ canvas.addEventListener("mousemove", handleToolMoved);
 exportBtn.addEventListener("click", exportCanvas);
 
 clearBtn.addEventListener("click", () => {
-    commands = [];
+    points = [];
     redoStack = [];
     clearCanvas();
 });
 
 undoBtn.addEventListener("click", () => {
-    if (commands.length > 0) {
-        const lastLine = commands.pop();
+    if (points.length > 0) {
+        const lastLine = points.pop();
         redoStack.push(lastLine!);
         redraw();
     }
@@ -389,7 +362,7 @@ undoBtn.addEventListener("click", () => {
 redoBtn.addEventListener("click", () => {
     if (redoStack.length > 0) {
         const redoLine = redoStack.pop();
-        commands.push(redoLine!);
+        points.push(redoLine!);
         redraw();
     }
 });
